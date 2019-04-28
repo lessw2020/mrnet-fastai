@@ -1,0 +1,14 @@
+{
+    "coronal": {
+        "mean": 29.6416,
+        "max": 57
+    },
+    "sagittal": {
+        "mean": 30.3776,
+        "max": 51
+    },
+    "axial": {
+        "mean": 34.2032,
+        "max": 61
+    }
+}
