@@ -13,9 +13,18 @@ class MRNetCase(ItemBase):
         # middle three grayscale slices, instead of repeating same middle slice 3x
         smid = sagittal.shape[0]//2
         self.data = sagittal[smid-1:smid+2,:,:]
-  # __str__ representation
-    def __str__(self):
-        pass        
+  # __str__ representation, or __repr__, since __str__ falls back on __repr__ if not otherwise defined
+    def __repr__(self): 
+        return f'''
+        {self.__class__.__name__} 
+        .obj attribute is tuple(axial, coronal, sagittal): 
+        {list(e.shape for e in self.obj)}
+            
+        .data attribute is three middle slices of sagittal
+        {self.data.shape}
+        {self.data}
+        '''
+
   # apply_tfms (optional)
 
 
@@ -24,7 +33,7 @@ class MRNetCase(ItemBase):
 class MRNetCaseList(ItemList):
 
   # class variables
-    # _bunch
+    _bunch = MRNetCaseDataBunch
     # _processor
     # _label_cls
 
@@ -51,9 +60,27 @@ class MRNetCaseList(ItemList):
     # since subclassing ItemList rather than ImageList, need an open method
     def open(self, fn): return np.load(fn)
 
-    # reconstruct
-    # analyze_pred
+    # TODO: reconstruct
+
+    # TODO: analyze_pred
+
+    # TODO: from_df
+    @classmethod
+    def from_df():
+        pass
 
   # advanced show methods
     # show_xys
     # show_xyzs
+
+class MRNetCaseDataBunch(DataBunch):
+    "DataBunch for MRNet knee scan data."
+
+    @classmethod
+    def from_df(cls, path:PathOrStr, df:pd.DataFrame, folder:PathOrStr=None, label_delim:str=None, valid_pct:float=0.2,
+                fn_col:IntsOrStrs=0, label_col:IntsOrStrs=1, suffix:str='', **kwargs:Any)->'ImageDataBunch':
+        "Create DataBunch from a `DataFrame` `df`."
+        src = (MRNetCaseList.from_df(df, path=path, folder=folder, suffix=suffix, cols=fn_col)
+                .split_by_rand_pct(valid_pct)
+                .label_from_df(label_delim=label_delim, cols=label_col))
+        return cls.create_from_ll(src, **kwargs)
