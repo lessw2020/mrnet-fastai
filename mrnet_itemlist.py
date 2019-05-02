@@ -108,7 +108,19 @@ class MRNetCaseList(ItemList):
         # then use split_by_idx to return split item lists
         return self.split_by_idx(valid_idx=valid_idx)
 
+    def link_label_df(self, df):
+        "Associate labels to cases using pandas DataFrame having Case column and one or more label columns"
+        # want to be able to use the existing fastai code around multiple labels and such
+        # so, need to associate a df to the CaseList object
+        # which will be referenced in multiple places as self.inner_df
+        # first join the df to the case numbers in self.items
+        casesDF = pd.DataFrame({'Case': self.items})
+        self.inner_df = pd.merge(casesDF, df, on ='Case')
     
+    
+
+
+
     # advanced show methods
     # show_xys
     # show_xyzs
