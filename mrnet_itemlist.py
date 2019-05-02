@@ -53,18 +53,20 @@ class MRNetCaseList(ItemList):
   # __init__ arguments
   # items for this subclass will likely be a list/iterator of Case strings
   # rather than filenames, since each case has 3 filenames, one for each plane
-    def __init__(self, items, **kwargs):
-        super().__init__(items, **kwargs)
+#   "Any additional arguments to the __init__ call that are saved in the ItemList's state must be passed
+#   along in the `new` method, because that is what is used to created train and validation sets when splitting.
+#   To do that, need to add their names in the `copy_new` argument of custom ItemList during the __init__.
+#   However, be sure to keep **kwargs as is."
+    def __init__(self, items, path, **kwargs):
+        super().__init__(items=items, path=path, **kwargs)
 
   # core methods
     # get
     def get(self, i):
-        # i indexes self.items, which is an array of filepaths(filenames)
-        fn = super().get(i)
-        # .stem returns the Case number, as a string
-        case = fn.stem
-        # also collect whether the case returned with get(i) is in train or valid folder
-        tv = 'train' if 'train' in fn.parts else 'valid'
+        # i indexes self.items, which is an ordered array of case numbers as strings
+        case = super().get(i)
+#       cases belong to either train or valid split in the folder structure
+        tv = 'train' if (self.path/'train'/'axial'/(case + '.npy')).exists() else 'valid'
         imagearrays = []
         for plane in ('axial','coronal','sagittal'):
             # self.path is available from kwargs of ItemList superclass
@@ -92,10 +94,21 @@ class MRNetCaseList(ItemList):
 
     @classmethod
     def from_folder(cls, path:PathOrStr='.', extensions:Collection[str]=['.npy'], **kwargs)->'MRNetCaseList':
-        "Get the filenames for all MRNet cases, assuming directory structure unchanged from MRNet data download"
-        return super().from_folder(path=path, extensions=extensions, **kwargs)
+        "Get the Case numbers for all MRNet cases, assuming directory structure unchanged from MRNet data download"
+        filepaths = get_files(path=path, extensions=extensions, recurse=True, **kwargs)
+        items = sorted(set([fp.stem for fp in filepaths]))
+        return cls(items=items, path=path)
 
+    def split_by_folder(self, train:str='train', valid:str='valid') -> 'MRNetCaseLists':
+        # given the list of items in the itemlist
+        # construct lists of train and valid indexes
+        # check whether the item is in a train folder or a validation folder
+        # arbitrarily choosing axial subfolder to check for case array
+        valid_idx = [i for i,case in enumerate(self.items) if (self.path/'valid'/'axial'/(case + '.npy')).exists()]
+        # then use split_by_idx to return split item lists
+        return self.split_by_idx(valid_idx=valid_idx)
 
+    
     # advanced show methods
     # show_xys
     # show_xyzs
