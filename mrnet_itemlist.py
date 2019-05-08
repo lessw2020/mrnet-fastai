@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import ndimage as nd
 from fastai.vision import *
 
 # ItemBase subclass
@@ -9,10 +10,8 @@ class MRNetCase(ItemBase):
     def __init__(self, axial, coronal, sagittal):
         self.axial,self.coronal,self.sagittal = axial,coronal,sagittal
         self.obj = (axial,coronal,sagittal)
-        # for .data, initially hard-code taking the middle three slices of the sagittal series
-        # middle three grayscale slices, instead of repeating same middle slice 3x
-        smid = sagittal.shape[0]//2
-        self.data = sagittal[smid-1:smid+2,:,:]
+        self.data = np.stack([axial,coronal,sagittal], axis=0)
+        
   # __str__ representation, or __repr__, since __str__ falls back on __repr__ if not otherwise defined
     def __repr__(self): 
         return f'''
@@ -20,7 +19,8 @@ class MRNetCase(ItemBase):
         `obj` attribute is tuple(axial, coronal, sagittal): 
         {list(e.shape for e in self.obj)}
             
-        `data` attribute is three middle slices of sagittal
+        `data` attribute is all three planar scan data arrays, 
+        with variations in slice count removed via interpolation
         {self.data.shape}
         {self.data}
         '''
@@ -72,25 +72,25 @@ class MRNetCaseList(ItemList):
             # self.path is available from kwargs of ItemList superclass
             fn  = self.path/tv/plane/(case + '.npy')
             res = self.open(fn)
-            imagearrays.append(res)
+            imagearrays.append(res) 
         assert len(imagearrays) == 3
         return MRNetCase(*imagearrays)
 
     # since subclassing ItemList rather than ImageList, need an open method
     def open(self, fn): return np.load(fn)
 
-    # TODO: reconstruct
-    def reconstruct(self, t, x):
-        # I think t is the tensor corresponding to the .data attribute of MRNetCase
-        # and x is the tuple of tensors corresponding to the .obj attribute of MRNetCase
-        # not sure if x is an MRNetCase or if x is MRNetCase.obj
+    # TODO: TEST reconstruct
+    def reconstruct(self, t):
+        # t is the pytorch tensor corresponding to the .data attribute of MRNetCase
         # the result of reconstruct should be to 
         # "return the same kind of object as .get returns"
         # which is a MRNetCase 
-        # and to build that, the entire tuple of tensors x is required
-        return MRNetCase(x) # or maybe MRNetCase(x.obj)
+        # and to build that, a tuple of numpy arrays is required
+        print('t: {1}'.format(t))
+        arrays = to_np(t)
+        return MRNetCase(arrays[0,:,:,:],arrays[1,:,:,:],arrays[2,:,:,:]) 
 
-    # TODO: analyze_pred
+    # TODO: analyze_pred                                                                                                                                                                                                                                                                                                                    
 
     @classmethod
     def from_folder(cls, path:PathOrStr='.', extensions:Collection[str]=['.npy'], **kwargs)->'MRNetCaseList':
@@ -116,8 +116,7 @@ class MRNetCaseList(ItemList):
         # first join the df to the case numbers in self.items
         casesDF = pd.DataFrame({'Case': self.items})
         self.inner_df = pd.merge(casesDF, df, on ='Case')
-    
-    
+
 
 
 
