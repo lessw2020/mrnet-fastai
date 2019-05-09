@@ -1,6 +1,8 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy import ndimage as nd
 from fastai.vision import *
+
 
 # ItemBase subclass
 class MRNetCase(ItemBase):
@@ -79,16 +81,41 @@ class MRNetCaseList(ItemList):
     # since subclassing ItemList rather than ImageList, need an open method
     def open(self, fn): return np.load(fn)
 
-    # TODO: TEST reconstruct
     def reconstruct(self, t):
         # t is the pytorch tensor corresponding to the .data attribute of MRNetCase
         # the result of reconstruct should be to 
         # "return the same kind of object as .get returns"
         # which is a MRNetCase 
         # and to build that, a tuple of numpy arrays is required
-        print('t: {1}'.format(t))
         arrays = to_np(t)
         return MRNetCase(arrays[0,:,:,:],arrays[1,:,:,:],arrays[2,:,:,:]) 
+
+    def show_batch(self, rows:int=4, ds_type:DatasetType=DatasetType.Train, **kwargs)->None:
+        "Show a batch of data in `ds_type` on a few `rows`."
+        x,y = self.one_batch(ds_type, True, True)
+        n_items = rows
+        if self.dl(ds_type).batch_size < n_items: n_items = self.dl(ds_type).batch_size
+        xs = [self.train_ds.x.reconstruct(grab_idx(x, i)) for i in range(n_items)]
+        #TODO: get rid of has_arg if possible
+        if has_arg(self.train_ds.y.reconstruct, 'x'):
+            ys = [self.train_ds.y.reconstruct(grab_idx(y, i), x=x) for i,x in enumerate(xs)]
+        else : ys = [self.train_ds.y.reconstruct(grab_idx(y, i)) for i in range(n_items)]
+        self.train_ds.x.show_xys(xs, ys, **kwargs)
+
+    # custom show_xys method for show_batch
+    # would like to have each row correspond to a case from three planes
+    def show_xys(self, xs, ys, imgsize:int=4, 
+                 figsize:Tuple[int,int]=(13,13), **kwargs):
+        "Show the `xs` (inputs) and `ys` (targets) on a figure of `figsize`."
+        rows = len(xs)
+        fig, axarray = plt.subplots(rows, 3, figsize=figsize)        
+        # start by showing the middle slice, from each plane
+        planes = ('axial','coronal','sagittal')
+        for i,(x,y) in enumerate(zip(xs, ys)):
+            for p,plane in enumerate(planes): 
+                axarray[i,p].imshow(x.data[p,11,:,:])
+                axarray[i,p].set_title('{} ({})'.format(y, plane))
+        plt.tight_layout()
 
     # TODO: analyze_pred                                                                                                                                                                                                                                                                                                                    
 
