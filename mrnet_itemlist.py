@@ -116,8 +116,9 @@ class MRNetCaseList(ItemList):
                 axarray[i,p].imshow(x.data[p,11,:,:])
                 axarray[i,p].set_title('{} ({})'.format(y, plane))
         plt.tight_layout()
+    # TODO: def show_xyzs # once have predictions to work with
 
-    # TODO: analyze_pred                                                                                                                                                                                                                                                                                                                    
+    # TODO: def analyze_pred                                                                                                                                                                                                                                                                                                                    
 
     @classmethod
     def from_folder(cls, path:PathOrStr='.', extensions:Collection[str]=['.npy'], **kwargs)->'MRNetCaseList':
@@ -144,10 +145,4 @@ class MRNetCaseList(ItemList):
         casesDF = pd.DataFrame({'Case': self.items})
         self.inner_df = pd.merge(casesDF, df, on ='Case')
 
-
-
-
-    # advanced show methods
-    # show_xys
-    # show_xyzs
 
